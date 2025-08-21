@@ -1,0 +1,30 @@
+Core components for modeling or deploying AI agents:
+
+1) Models
+- The beating heart of an AI agent. 
+- These are the foundation—large language models, vision models, multimodal models—that give the agent its ability to reason, generate, and respond. 
+- The "intelligence" lives here.
+
+2) Tools
+- External powers the agent can call upon. 
+- APIs, plugins, databases, calculators, or custom functions that extend the model’s raw capabilities into action in the real world.
+
+3) Knowledge & Memory
+- The agent’s sense of continuity. 
+- Knowledge refers to what’s pre-trained into the model or added via retrieval (like documents or search). 
+- Memory tracks ongoing interactions, context, or history—so the agent doesn’t feel forgetful.
+
+4) Audio & Speech
+- The voice and ears of the agent. 
+- Speech-to-text for understanding humans, and text-to-speech for replying back. 
+- This makes agents feel less like code and more like companions.
+
+5) Guardrails
+- The rules of the road. 
+- Safety layers, filters, policies, and constraints that keep the agent from misbehaving, going off-topic, or producing harmful output. 
+- Guardrails protect both the user and the system.
+
+6) Orchestration
+- The conductor of the whole symphony. 
+- It decides when to call the model, when to fetch knowledge, when to use a tool, and how to weave everything into a smooth response. 
+- Without orchestration, the agent is chaos.
