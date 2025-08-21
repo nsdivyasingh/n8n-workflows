@@ -1,0 +1,574 @@
+{
+  "name": "AI-research Learning agent",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Search Form",
+        "formDescription": "Input your search query to create an audio version of a specific topic to learn",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Topic",
+              "placeholder": "AI agent"
+            },
+            {
+              "fieldLabel": "Time period",
+              "placeholder": "3 months"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -80,
+        -224
+      ],
+      "id": "On form submission",
+      "name": "On form submission",
+      "webhookId": ""
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=* role:\n  You are a research-and-learning AI agent. Your job is to take a user’s specific query and a defined time period, investigate the topic using reputable sources (prioritizing primary sources), verify the facts, and produce a tight, audio-optimized written summary that can be read aloud later. You may use the Google Gemini tool for searching and source discovery. You must also return a compact “simple memory” record of what you found so downstream steps can store it.\n\n* inputs:\n  1. **user_query** (string): {{ $json.Topic }} — the exact topic/question to investigate.\n  2. **time_period** (string): {{ $json['Time period'] }} — the time window to constrain research (e.g., “Jan 2023–Jul 2024”, “last 6 months”, “2010–present”).\n\n* task:\n  1. **Scope & intent**\n     * Parse the *user_query* \"{{ $json.Topic }}\" and *time_period* \"{{ $json['Time period'] }}\".\n     * Infer key entities, subtopics, geography, and relevant metrics.\n     * If the time window is ambiguous (“recent”), interpret conservatively as the last 12 months.\n\n  2. **Search planning**\n     * Craft 3–6 precise search strings with synonyms and boolean/operators (e.g., site:, filetype:, intitle:) to surface primary materials (official releases, filings, standards, laws, datasets, peer-reviewed papers) and reputable secondary sources (top journals, major newspapers, government/NGO, established industry reports).\n     * Examples of “primary” signals: official gov/regulator domains, company investor relations, peer-reviewed journals, standards bodies, court dockets, datasets, transcripts.\n\n  3. **Use Google Gemini**\n     * Use the Google Gemini tool to execute the search plan and retrieve results.\n     * Collect candidate results, extracting: title, publisher/author, date (published/updated), URL, and a brief snippet.\n     * Iterate until you have strong coverage of the *time_period* and core claims (aim for ≥2 independent reputable sources per key claim, with primary sources preferred).\n\n  4. **Source vetting & ranking**\n     * Rank sources by credibility, recency (within the requested *time_period*), methodological transparency, and proximity to primary evidence.\n     * Exclude low-quality or opaque sources (unattributed blogs, unsourced social posts, AI-generated content without citations).\n\n  5. **Fact extraction & cross-check**\n     * Pull exact facts, stats, dates, quotations, and definitions.\n     * Cross-verify each key claim across ≥2 reputable sources, with at least one primary source when feasible.\n     * Note disagreements; prefer the most direct/official evidence and state uncertainty plainly.\n\n  6. **Synthesis (audio-optimized)**\n     * Write for the ear: short sentences, clear transitions, pronounce acronyms on first mention, expand uncommon abbreviations, round numbers sensibly, and avoid inline URLs inside the narrative.\n     * Keep the main narrative focused and, where relevant, chronological for the *time_period* \"{{ $json['Time period'] }}\".\n     * Limit jargon; define any necessary terms in a quick glossary.\n\n  7. **Citations**\n     * List sources after the narrative. Group **Primary sources** first, then **Secondary**.\n     * For each: Author/Org — Title — Publisher/Outlet — Date (YYYY-MM-DD if available) — URL.\n\n  8. **Simple memory construction**\n     * Create a compact JSON record capturing: topic \"{{ $json.Topic }}\", time_period \"{{ $json['Time period'] }}\", date_run (UTC) \"{{ $json.submittedAt }}\", key_points (3–6 bullets), primary_sources (array of URLs), notable_dates (array of {date, event}), open_questions (array), and tags (array).\n\n  9. **Quality checks**\n     * Ensure every statistic/date in the narrative appears in at least one cited source (preferably primary).\n     * Remove hype, speculation, or hedging beyond what the evidence supports. If evidence is thin, say so.\n     * Ensure tone is direct, encouraging, and lightly lyrical—no fluff, no emojis, no slang unless a term is industry-standard.\n\n  10. **Output**\n     * Emit exactly the structure below (no extra commentary).\n     * Do **not** include raw tool logs or API responses.\n\n* output:\n  Produce **exactly** the following structure, optimized for audio delivery and ready to be stored as memory. Replace bracketed sections with your content.\n\n  TITLE: [Clear, human title—10 words max]\n\n  ONE-LINE TAKEAWAY: [A single, punchy sentence that captures the core answer.]\n\n  KEY TAKEAWAYS:\n  1) [≤20 words, crisp, evidence-backed]\n  2) [≤20 words]\n  3) [≤20 words]\n  4) [≤20 words]\n  5) [≤20 words]\n\n  NARRATIVE SUMMARY:\n  [3–6 short paragraphs, 2–4 sentences each. Write for the ear: simple sentences, active voice, smooth transitions. Define acronyms on first use. State what changed over the requested time period \"{{ $json['Time period'] }}\". Call out major drivers, implications, and any controversies. When numbers appear, include a spoken cue, e.g., “fifteen point two percent.” Avoid parentheticals and URLs here.]\n\n  TIMELINE (within [time_period]):\n  - [YYYY-MM-DD] — [Event/Publication] — [Why it matters]\n  - [YYYY-MM-DD] — [Event/Publication] — [Why it matters]\n  - [YYYY-MM-DD] — [Event/Publication] — [Why it matters]\n\n  DEFINITIONS:\n  - [Term]: [Plain-English definition, one line.]\n  - [Term]: [One line.]\n\n  NUMBERS TO KNOW:\n  - [Metric] — [Value and unit] — (spoken: “[how to read it aloud]”)\n  - [Metric] — [Value and unit] — (spoken: “[how to read it aloud]”)\n\n  LIMITATIONS & UNCERTAINTIES:\n  - [What we don’t know or what sources disagree on, stated plainly.]\n\n  PRIMARY SOURCES:\n  1) [Author/Org] — [Title] — [Publisher/Outlet] — [YYYY-MM-DD] — [URL]\n  2) [Author/Org] — [Title] — [Publisher/Outlet] — [YYYY-MM-DD] — [URL]\n\n  SECONDARY SOURCES:\n  1) [Author/Org] — [Title] — [Publisher/Outlet] — [YYYY-MM-DD] — [URL]\n  2) [Author/Org] — [Title] — [Publisher/Outlet] — [YYYY-MM-DD] — [URL]\n\n  NEXT STEPS FOR LEARNERS:\n  - [One practical action or follow-up reading path.]\n  - [Another concrete next step.]\n\n  MEMORY:\n  {\n    \"topic\": \"{{ $json.Topic }}\",\n    \"time_period\": \"{{ $json['Time period'] }}\",\n    \"date_run\": \"{{ $json.submittedAt }}\",\n    \"key_points\": [\"[concise, evidence-backed]\", \"[…]\", \"[…]\"],\n    \"primary_sources\": [\"[URL]\", \"[URL]\", \"[URL]\"],\n    \"notable_dates\": [{\"date\": \"[YYYY-MM-DD]\", \"event\": \"[what happened]\"}],\n    \"open_questions\": [\"[remaining uncertainty or research gap]\"],\n    \"tags\": [\"[domain]\", \"[subtopic]\", \"[region]\"]\n  }\n\n  TONE GUIDELINES (apply to all text above):\n  - Tell it like it is: direct, no fluff, no hype.\n  - Lightly lyrical and encouraging—sound human and confident, not cutesy.\n  - Respect tradition when relevant; be forward-looking on implications.\n  - Keep sentences speakable and short; vary rhythm for pleasant audio.\n  - Avoid slang unless it carries precise meaning in context.\n  - Never include URLs inside the narrative; URLs only in the Sources lists.\n\n  COMPLIANCE & SAFETY GUARDRAILS:\n  - Prefer primary sources; cite dates explicitly.\n  - If claims cannot be verified within the *time_period* \"{{ $json['Time period'] }}\", mark them as tentative or exclude them.\n  - Do not invent data or citations.\n  - If content touches on medical, legal, or financial topics, include a brief “not advice” note inside **Limitations & Uncertainties**.\n  - If sources conflict, state the conflict and present the most defensible view with citations.\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        432,
+        -128
+      ],
+      "id": "On form submission",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "Summary"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        496,
+        112
+      ],
+      "id": "",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Prompt', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGeminiTool",
+      "typeVersion": 1,
+      "position": [
+        624,
+        112
+      ],
+      "id": "",
+      "name": "Message a model in Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "input": "={{ $json.output }}",
+        "voice": "nova",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1632,
+        -368
+      ],
+      "id": "",
+      "name": "Generate audio",
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "",
+        "subject": "Topic: Summary",
+        "message": "Here's your audio file",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1856,
+        -368
+      ],
+      "id": "",
+      "name": "Send a message",
+      "webhookId": "",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "classify",
+        "input": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1056,
+        -272
+      ],
+      "id": "",
+      "name": "Classify text for violations",
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        368,
+        112
+      ],
+      "id": "",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "flagged",
+                    "rightValue": "false",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": ""
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "",
+                    "leftValue": "flagged",
+                    "rightValue": "true",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1344,
+        -272
+      ],
+      "id": "",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "sendTo": "",
+        "subject": "Summary: error",
+        "message": "There was text voilation. Please check the workflow for more details",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1632,
+        -176
+      ],
+      "id": "",
+      "name": "Send a message1",
+      "webhookId": "",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "evaluation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1avgih2H4RmT5kuvw5nteaTAUJB0_ZtGrquS06Z894_E/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1avgih2H4RmT5kuvw5nteaTAUJB0_ZtGrquS06Z894_E/edit#gid=0"
+        }
+      },
+      "type": "n8n-nodes-base.evaluationTrigger",
+      "typeVersion": 4.6,
+      "position": [
+        -80,
+        -32
+      ],
+      "id": "",
+      "name": "When fetching a dataset row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -128
+      ],
+      "id": "",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -128
+      ],
+      "id": "",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1avgih2H4RmT5kuvw5nteaTAUJB0_ZtGrquS06Z894_E",
+          "mode": "list",
+          "cachedResultName": "evaluation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1avgih2H4RmT5kuvw5nteaTAUJB0_ZtGrquS06Z894_E/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1avgih2H4RmT5kuvw5nteaTAUJB0_ZtGrquS06Z894_E/edit#gid=0"
+        },
+        "outputs": {
+          "values": [
+            {
+              "outputName": "output",
+              "outputValue": "={{ $json.output }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.evaluation",
+      "typeVersion": 4.7,
+      "position": [
+        1056,
+        32
+      ],
+      "id": "",
+      "name": "Evaluation",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "setMetrics",
+        "metric": "helpfulness",
+        "userQuery": "query",
+        "actualAnswer": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.evaluation",
+      "typeVersion": 4.7,
+      "position": [
+        1280,
+        32
+      ],
+      "id": "",
+      "name": "Evaluation1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        256
+      ],
+      "id": "",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAi account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model in Google Gemini": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate audio": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify text for violations": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Generate audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When fetching a dataset row": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing1": {
+      "main": [
+        [
+          {
+            "node": "Classify text for violations",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Evaluation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluation": {
+      "main": [
+        [
+          {
+            "node": "Evaluation1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Evaluation1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "be8eaf3d-a9e1-4241-a4a7-818e356d09e4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a964876b18cefe452b9a8bb394ffeede86516ed83911c96d30a5ea4f060c7c91"
+  },
+  "id": "m2lk0RH5N3eZ2Yk4",
+  "tags": []
+}
